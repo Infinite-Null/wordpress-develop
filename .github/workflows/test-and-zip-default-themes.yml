@@ -36,6 +36,10 @@ on:
         required: true
         type: string
         default: 'trunk'
+      themes:
+        description: 'Comma-separated list of themes to process (optional)'
+        required: false
+        type: string
 
 # Cancels all previous workflow runs for pull requests that have not completed.
 concurrency:
@@ -49,6 +53,40 @@ concurrency:
 permissions: {}
 
 jobs:
+  determine-themes:
+    runs-on: ubuntu-24.04
+    outputs:
+      theme-matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set theme matrix
+        id: set-matrix
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.themes }}" ]; then
+            # Convert comma-separated themes to JSON array
+            THEMES=$(echo "${{ github.event.inputs.themes }}" | \
+                    tr ',' '\n' | \
+                    jq -R -s -c 'split("\n")[:-1]')
+          else
+            # Default list of all themes
+            THEMES='[
+              "twentytwentyfive",
+              "twentytwentyfour",
+              "twentytwentythree",
+              "twentytwentytwo",
+              "twentytwentyone",
+              "twentytwenty",
+              "twentynineteen",
+              "twentyseventeen",
+              "twentysixteen",
+              "twentyfifteen",
+              "twentyfourteen",
+              "twentythirteen",
+              "twentytwelve",
+              "twentyeleven",
+              "twentyten"
+            ]'
+          fi
+          echo "matrix=${THEMES}" >> $GITHUB_OUTPUT
   # Checks for zero-byte files.
   #
   # Occasionally, binary files such as images and fonts are added to themes incorrectly.
@@ -58,6 +96,7 @@ jobs:
   # - Checks out the repository.
   # - Checks for zero-byte (empty) files.
   check-for-empty-files:
+    needs: determine-themes
     name: ${{ matrix.theme }} empty file check
     runs-on: ubuntu-24.04
     permissions:
@@ -67,23 +106,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        theme: [
-          'twentytwentyfive',
-          'twentytwentyfour',
-          'twentytwentythree',
-          'twentytwentytwo',
-          'twentytwentyone',
-          'twentytwenty',
-          'twentynineteen',
-          'twentyseventeen',
-          'twentysixteen',
-          'twentyfifteen',
-          'twentyfourteen',
-          'twentythirteen',
-          'twentytwelve',
-          'twentyeleven',
-          'twentyten'
-        ]
+        theme: ${{fromJson(needs.determine-themes.outputs.theme-matrix)}}
 
     steps:
       - name: Checkout repository
@@ -108,6 +131,7 @@ jobs:
   # - Runs the theme build script.
   # - Ensures version-controlled files are not modified or deleted.
   test-build-scripts:
+    needs: determine-themes
     name: Test ${{ matrix.theme }} build script
     runs-on: ubuntu-24.04
     permissions:
@@ -117,11 +141,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        theme: [
-            'twentytwentyone',
-            'twentytwenty',
-            'twentynineteen',
-        ]
+        theme: ${{fromJson(needs.determine-themes.outputs.theme-matrix)}}
+        include:
+          - theme: twentytwentyone
+          - theme: twentytwenty
+          - theme: twentynineteen
 
     defaults:
       run:
@@ -157,33 +181,17 @@ jobs:
   # - Checks out the repository.
   # - Uploads the theme files as a workflow artifact (files uploaded as an artifact are automatically zipped).
   bundle-theme:
+    needs: [determine-themes, check-for-empty-files, test-build-scripts]
     name: Create ${{ matrix.theme }} ZIP file
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-    needs: [ check-for-empty-files, test-build-scripts ]
     timeout-minutes: 10
     if: ${{ github.repository == 'WordPress/wordpress-develop' || github.event_name == 'pull_request' }}
     strategy:
       fail-fast: false
       matrix:
-        theme: [
-            'twentytwentyfive',
-            'twentytwentyfour',
-            'twentytwentythree',
-            'twentytwentytwo',
-            'twentytwentyone',
-            'twentytwenty',
-            'twentynineteen',
-            'twentyseventeen',
-            'twentysixteen',
-            'twentyfifteen',
-            'twentyfourteen',
-            'twentythirteen',
-            'twentytwelve',
-            'twentyeleven',
-            'twentyten'
-        ]
+        theme: ${{fromJson(needs.determine-themes.outputs.theme-matrix)}}
 
     steps:
       - name: Checkout repository
