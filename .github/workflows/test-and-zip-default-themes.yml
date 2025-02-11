@@ -61,11 +61,12 @@ jobs:
       - name: Set theme matrix
         id: set-matrix
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.themes }}" ]; then
-            # Convert comma-separated themes to JSON array
+          if [ "${{ github.event.inputs.themes }}" != "" ]; then
+            # Create JSON array from comma-separated themes
             THEMES=$(echo "${{ github.event.inputs.themes }}" | \
-                    tr ',' '\n' | \
-                    jq -R -s -c 'split("\n")[:-1]')
+                    sed 's/,/","/g' | \
+                    sed 's/^/["/' | \
+                    sed 's/$/"]/')
           else
             # Default list of all themes
             THEMES='[
@@ -106,7 +107,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        theme: ${{fromJson(needs.determine-themes.outputs.theme-matrix)}}
+        theme: ${{ fromJson(needs.determine-themes.outputs.theme-matrix) }}
 
     steps:
       - name: Checkout repository
@@ -141,7 +142,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        theme: ${{fromJson(needs.determine-themes.outputs.theme-matrix)}}
+        theme: ${{ fromJson(needs.determine-themes.outputs.theme-matrix) }}
         include:
           - theme: twentytwentyone
           - theme: twentytwenty
@@ -191,7 +192,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        theme: ${{fromJson(needs.determine-themes.outputs.theme-matrix)}}
+        theme: ${{ fromJson(needs.determine-themes.outputs.theme-matrix) }}
 
     steps:
       - name: Checkout repository
