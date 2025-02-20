@@ -1,15 +1,13 @@
 # Files and folders related to build/test tools
-build
-build-module
-build-types
-node_modules
+/build
+/node_modules
 /tests
 /vendor
 /tools
 /jsdoc
 /artifacts
 /coverage
-/.cache
+.cache/*
 /src/wp-includes/blocks/**/*.js
 /src/wp-includes/blocks/**/*.js.map
 /src/wp-admin/js
@@ -19,7 +17,6 @@ node_modules
 
 # Webpack built files
 /src/wp-includes/js
-*.min.js
 
 # Themes
 src/wp-content/themes
